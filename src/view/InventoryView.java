@@ -68,7 +68,7 @@ public class InventoryView extends JDialog {
         	Object[] row = {
         		    p.getId(),
         		    p.getName(),
-        		    String.format("%.2f", p.getPrice()),
+        		    String.format("%.2f", p.getWholesalerPrice().getValue()),
         		    p.isAvailable() ? "Sí" : "No",
         		    p.getStock()
         		};

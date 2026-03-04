@@ -30,7 +30,6 @@ public class DaoImplMongoDB implements Dao {
 	MongoCollection<Document> employees;
 	MongoCollection<Document> inventory;
 	MongoCollection<Document> historical;
-	
 
 	@Override
 	public void connect() {
@@ -45,13 +44,13 @@ public class DaoImplMongoDB implements Dao {
 		historical = mongoDatabase.getCollection("historical_inventory");
 
 	}
-	
+
 	@Override
 	public Employee getEmployee(int employeeId, String password) {
 
 		Employee employee = null;
 		Document document = employees.find(eq("employeeId", employeeId)).first();
-		
+
 		try {
 			if (document != null && password.equals(document.getString("password"))) {
 				employee = new Employee(document.getInteger("employeeId"), document.getString("name"),
@@ -65,51 +64,67 @@ public class DaoImplMongoDB implements Dao {
 
 	@Override
 	public ArrayList<Product> getInventory() {
-		ArrayList<Product> products = new ArrayList<>();
-		
-		Iterable<Document> docs = inventory.find();
-		
-		try {
-			for (Document document : docs) {
-				Document priceDocument = (Document) document.get("wholesalerprice");
-				
-				double value = priceDocument.getDouble("value");
-				String currency = priceDocument.getString("currency");
-				products.add(new Product(document.getString("name"), document.getBoolean("available"), new Amount(value), document.getInteger("stock")));
-			}
-			
-		} catch (MongoException e) {
-			e.printStackTrace();
-		}
-		return products;
+	    ArrayList<Product> products = new ArrayList<>();
+	    Iterable<Document> docs = inventory.find();
+
+	    try {
+	        for (Document document : docs) {
+
+	            // wholesalerprice puede no existir en documentos antiguos
+	            Document priceDocument = document.get("wholesalerprice", Document.class);
+
+	            double value = 0.0;
+	            if (priceDocument != null) {
+	                Number n = priceDocument.get("value", Number.class);
+	                if (n != null) value = n.doubleValue();
+	            }
+
+	            Boolean availableObj = document.getBoolean("available");
+	            boolean available = (availableObj != null) ? availableObj : true;
+
+	            Integer stockObj = document.getInteger("stock");
+	            int stock = (stockObj != null) ? stockObj : 0;
+	            
+	            
+	            Product p = new Product(document.getString("name"), available, new Amount(value), stock);
+	            Integer id = document.getInteger("id");
+	            if (id != null) p.setId(id);
+	            p.setPrice(value);
+	            products.add(p);
+
+	           
+	            
+	            System.out.println(document.toJson());
+	        }
+	        
+	    } catch (MongoException e) {
+	        e.printStackTrace();
+	    }
+	    return products;
 	}
 
 	@Override
 	public boolean writeInventory(ArrayList<Product> list) {
 		int counterProduct = 1;
-		
+
 		try {
 			for (Product product : list) {
-				Document priceDoc = new Document(
-						"value", product.getPrice())
-						.append("currency", "€");
-				
+				Document priceDoc = new Document("value", ((Number)product.getPrice()).doubleValue())
+				        .append("currency", "€");
+
 				Date now = new Date();
-				
-				Document doc = new Document("_id", new ObjectId())
-						.append("id", counterProduct)
-						.append("name", product.getName())
-						.append("wholesalerprice", priceDoc)
-						.append("available", product.isAvailable())
-						.append("stock", product.getStock())
+
+				Document doc = new Document("_id", new ObjectId()).append("id", counterProduct)
+						.append("name", product.getName()).append("wholesalerprice", priceDoc)
+						.append("available", product.isAvailable()).append("stock", product.getStock())
 						.append("created_at", now);
-				
+
 				historical.insertOne(doc);
 				counterProduct++;
 			}
-			
+
 			return true;
-			
+
 		} catch (MongoException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -119,19 +134,26 @@ public class DaoImplMongoDB implements Dao {
 
 	@Override
 	public void addProduct(Product product) {
-		Document findId = inventory.find().sort(Sorts.descending("id")).first();
-		
-		Document price = new Document("value", product.getWholesalerPrice().getValue()).append("currency", "€");
-		
-		Document doc = new Document("_id", new ObjectId())
-				.append("name", product.getName())
-				.append("available", true)
-				.append("wholesalerprice", price)
-				.append("stock", product.getStock())
-				.append("id", findId.getInteger("id") + 1);
-		
-		inventory.insertOne(doc);
 
+		Document last = inventory.find().sort(Sorts.descending("id")).first();
+
+		int nextId = 1;
+		if (last != null) {
+			Integer lastId = last.getInteger("id");
+			if (lastId != null) {
+				nextId = lastId + 1;
+			}
+		}
+
+		Document price = new Document("value", product.getWholesalerPrice().getValue())
+		        .append("currency", "€");
+
+		Document doc = new Document("_id", new ObjectId())
+				.append("id", nextId)
+				.append("name", product.getName()).append("available", true).append("wholesalerprice", price)
+				.append("stock", product.getStock());
+
+		inventory.insertOne(doc);
 	}
 
 	@Override
@@ -143,7 +165,7 @@ public class DaoImplMongoDB implements Dao {
 	@Override
 	public void deleteProduct(int product) {
 		inventory.deleteOne(eq("id", product));
-		
+
 	}
 
 	@Override
@@ -151,7 +173,5 @@ public class DaoImplMongoDB implements Dao {
 		// TODO Auto-generated method stub
 
 	}
-
-	
 
 }

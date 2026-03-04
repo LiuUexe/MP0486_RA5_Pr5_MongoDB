@@ -132,21 +132,35 @@ public class ProductView extends JDialog implements ActionListener {
 
 			case Constants.OPTION_ADD_PRODUCT:
 
-				product = shop.findProduct(textFieldName.getText());
+			    product = shop.findProduct(textFieldName.getText());
 
-				if (product != null) {
-					JOptionPane.showMessageDialog(null, "Producto ya existe", "Error", JOptionPane.ERROR_MESSAGE);
-				} else {
-					product = new Product(textFieldName.getText(), true,
-							new Amount(Double.parseDouble(textFieldPrice.getText())),
-							Integer.parseInt(textFieldStock.getText()));
+			    if (product != null) {
+			        JOptionPane.showMessageDialog(null, "Producto ya existe", "Error", JOptionPane.ERROR_MESSAGE);
+			    } else {
 
-					shop.addProduct(product);
-					JOptionPane.showMessageDialog(null, "Producto añadido", "Info", JOptionPane.INFORMATION_MESSAGE);
-					dispose();
-				}
+			        // 1) Leer y validar stock
+			        int stock = Integer.parseInt(textFieldStock.getText().trim());
 
-				break;
+			        // 2) Leer precio admitiendo coma o punto
+			        String priceText = textFieldPrice.getText().trim().replace(",", ".");
+			        double priceValue = Double.parseDouble(priceText);
+
+			        // 3) Crear Amount con valor (y si tu Amount tiene currency, mejor)
+			        Amount amount = new Amount(priceValue); // o new Amount(priceValue, "€") si existe ese constructor
+
+			        product = new Product(
+			                textFieldName.getText().trim(),
+			                true,
+			                amount,
+			                stock
+			        );
+
+			        shop.addProduct(product);
+			        JOptionPane.showMessageDialog(null, "Producto añadido", "Info", JOptionPane.INFORMATION_MESSAGE);
+			        dispose();
+			    }
+
+			    break;
 
 			case Constants.OPTION_ADD_STOCK:
 
