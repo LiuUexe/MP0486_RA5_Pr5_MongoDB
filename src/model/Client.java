@@ -1,6 +1,5 @@
 package model;
 
-import main.Logable;
 import main.Payable;
 
 public class Client extends Person implements Payable {
@@ -30,17 +29,11 @@ public class Client extends Person implements Payable {
 		this.balance = balance;
 	}
 
-	/**
-	 * @param sale amount to subtract from balance client
-	 * @return true if final balance is positive, false if negative
-	 */
 	@Override
 	public boolean pay(Amount amount) {
-		// substract amount from balance
-		this.balance.setValue(this.balance.getValue()-amount.getValue());
-		
-		// check final balance
-		if (this.balance.getValue()>0) {
+		this.balance.setValue(this.balance.getValue() - amount.getValue());
+
+		if (this.balance.getValue() > 0) {
 			return true;
 		}
 		return false;
@@ -48,9 +41,6 @@ public class Client extends Person implements Payable {
 
 	@Override
 	public String toString() {
-		return "Client [memberId=" + memberId + ", balance=" + balance + ", name=" + name + "]";
+		return "Client [memberId=" + memberId + ", balance=" + balance + ", name=" + getName() + "]";
 	}
-	
-	
-
 }
